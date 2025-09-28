@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flicker Light Stimulation</title>
+    <style>
+        /* Basic styles for a dark, immersive theme */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* The main screen that will do the flickering */
+        #flicker-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000;
+            z-index: 1;
+            transition: background-color 0s; /* Ensure instant color change */
+        }
+
+        /* The control panel */
+        #controls {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            background: rgba(30, 30, 30, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 1rem;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        #controls h2 {
+            margin: 0 0 1rem 0;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 0.5rem;
+            width: 100%;
+            text-align: center;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 1rem;
+        }
+
+        input[type="number"], input[type="color"] {
+            background-color: #333;
+            border: 1px solid #555;
+            color: white;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            width: 70px;
+        }
+        
+        input[type="color"] {
+            padding: 0.25rem;
+            height: 40px;
+        }
+
+        /* Styling for all buttons */
+        button {
+            background-color: #4CAF50; /* Green for start */
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 1rem;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 0.5rem;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        #stop-button {
+            background-color: #f44336; /* Red for stop */
+        }
+        
+        #fullscreen-button {
+            background-color: #008CBA; /* Blue for fullscreen */
+        }
+
+        /* A very important safety warning */
+        #safety-warning {
+            position: fixed;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            background: rgba(255, 235, 59, 0.8); /* Yellow */
+            color: #000;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            text-align: center;
+            max-width: 90%;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="flicker-screen"></div>
+
+    <div id="controls">
+        <h2>FLS Controller</h2>
+        <div class="control-group">
+            <label for="hz-input">Frequency (Hz):</label>
+            <input type="number" id="hz-input" value="10" min="1" max="60">
+        </div>
+        <div class="control-group">
+            <label for="color-input">Color:</label>
+            <input type="color" id="color-input" value="#FFFFFF">
+        </div>
+        <div>
+            <button id="start-button">Start</button>
+            <button id="stop-button">Stop</button>
+        </div>
+        <button id="fullscreen-button">Toggle Fullscreen</button>
+    </div>
+
+    <div id="safety-warning">
+        <strong>Warning:</strong> Do not use if you have a history of seizures or epilepsy. Consult a doctor first.
+    </div>
+
+    <script>
+        // Get references to all the interactive elements
+        const flickerScreen = document.getElementById('flicker-screen');
+        const controls = document.getElementById('controls');
+        const warning = document.getElementById('safety-warning');
+        
+        const hzInput = document.getElementById('hz-input');
+        const colorInput = document.getElementById('color-input');
+
+        const startButton = document.getElementById('start-button');
+        const stopButton = document.getElementById('stop-button');
+        const fullscreenButton = document.getElementById('fullscreen-button');
+
+        let flickerInterval = null;
+        let isLit = false;
+
+        function startFlicker() {
+            // Stop any previously running flicker
+            stopFlicker();
+
+            const frequency = parseFloat(hzInput.value);
+            const selectedColor = colorInput.value;
+            
+            // Validate frequency
+            if (isNaN(frequency) || frequency <= 0 || frequency > 60) {
+                alert("Please enter a valid frequency between 1 and 60 Hz.");
+                return;
+            }
+
+            // The interval needs to be half the period for a full on/off cycle
+            const intervalTime = 1000 / (frequency * 2);
+
+            // Hide controls for an immersive experience
+            controls.style.display = 'none';
+            warning.style.display = 'none';
+
+            flickerInterval = setInterval(() => {
+                flickerScreen.style.backgroundColor = isLit ? 'black' : selectedColor;
+                isLit = !isLit;
+            }, intervalTime);
+        }
+
+        function stopFlicker() {
+            clearInterval(flickerInterval);
+            flickerInterval = null;
+            flickerScreen.style.backgroundColor = 'black'; // Reset to black
+            isLit = false;
+            
+            // Show controls again
+            controls.style.display = 'flex';
+            warning.style.display = 'block';
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        // Attach the functions to the button click events
+        startButton.addEventListener('click', startFlicker);
+        stopButton.addEventListener('click', stopFlicker);
+        fullscreenButton.addEventListener('click', toggleFullscreen);
+
+    </script>
+
+</body>
+</html>
