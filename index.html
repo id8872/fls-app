@@ -24,17 +24,16 @@
             overflow: hidden; /* Prevent scrollbars */
         }
 
-        /* Main controls container */
         #controls {
             display: flex;
-            flex-direction: column; /* Stack items vertically */
-            align-items: center;   /* Center items horizontally */
-            justify-content: center; /* Center items vertically */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             height: 100%;
             padding: 20px;
-            box-sizing: border-box; /* Include padding in the element's total width and height */
-            max-width: 500px; /* Good for desktop */
-            margin: 0 auto;   /* Center the container itself */
+            box-sizing: border-box;
+            max-width: 500px;
+            margin: 0 auto;
             transition: opacity 0.5s ease;
         }
 
@@ -46,13 +45,13 @@
         
         .presets {
             display: flex;
-            flex-wrap: wrap; /* This is key for mobile! */
+            flex-wrap: wrap;
             justify-content: center;
-            gap: 10px; /* Adds space between buttons */
+            gap: 10px;
         }
 
         .preset-label {
-            width: 100%; /* Makes the label take its own line */
+            width: 100%;
             margin-bottom: 8px;
             font-size: 0.9em;
             color: #aaa;
@@ -78,7 +77,7 @@
             background-color: var(--button-bg);
             color: var(--text-color);
             border: 1px solid #666;
-            padding: 12px 20px; /* Increased padding for better touch targets */
+            padding: 12px 20px;
             border-radius: 8px;
             cursor: pointer;
             font-size: 1em;
@@ -93,26 +92,31 @@
             background-color: var(--primary-color);
             color: white;
             font-weight: bold;
-            width: 100%; /* Make the main button full width */
+            width: 100%;
             font-size: 1.3em;
             padding: 15px;
             margin-top: 10px;
         }
 
-        /* Animation overlay for eye-closing effect */
+        /* Specific styles for colored buttons */
+        #btn-white { background-color: #FFFFFF; color: #000; border-color: #ccc; }
+        #btn-white:hover { background-color: #e0e0e0; }
+        
+        #btn-red { background-color: #D32F2F; color: #fff; border-color: #B71C1C; }
+        #btn-red:hover { background-color: #B71C1C; }
+
+        #btn-blue { background-color: #1976D2; color: #fff; border-color: #0D47A1; }
+        #btn-blue:hover { background-color: #0D47A1; }
+
+        #btn-green { background-color: #388E3C; color: #fff; border-color: #1B5E20; }
+        #btn-green:hover { background-color: #1B5E20; }
+
+
         #animation-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--background-color);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-            color: white;
-            font-size: 2em;
+            display: none; justify-content: center; align-items: center;
+            z-index: 100; color: white; font-size: 2em;
         }
 
         #animation-overlay.active {
@@ -135,7 +139,6 @@
             100% { opacity: 1; }
         }
 
-        /* Flashing state */
         body.flashing {
             cursor: none;
             animation: flash 1s linear infinite;
@@ -162,19 +165,19 @@
         </div>
         
         <div class="control-group presets">
-            <div class="preset-label">Frequency (Brainwave States)</div>
-            <button class="preset-btn" data-freq="10">Alpha (Relaxation)</button>
-            <button class="preset-btn" data-freq="15">Beta (Focus)</button>
-            <button class="preset-btn" data-freq="40">Gamma (Cognition)</button>
-            <button class="preset-btn" data-freq="6">Theta (Meditation)</button>
+            <div class="preset-label">Frequency Presets</div>
+            <button class="preset-btn" data-freq="10">Alpha</button>
+            <button class="preset-btn" data-freq="15">Beta</button>
+            <button class="preset-btn" data-freq="40">Gamma</button>
+            <button class="preset-btn" data-freq="6">Theta</button>
         </div>
 
         <div class="control-group presets">
-            <div class="preset-label">Light Color (Function)</div>
-            <button class="color-btn" data-color="#FFFFFF">White (Standard)</button>
-            <button class="color-btn" data-color="#FF4500">Orange (Energy)</button>
-            <button class="color-btn" data-color="#0000FF">Blue (Calm)</button>
-            <button class="color-btn" data-color="#4CBB17">Green (Balance)</button>
+            <div class="preset-label">Light Color</div>
+            <button class="color-btn" id="btn-white" data-color="#FFFFFF">White</button>
+            <button class="color-btn" id="btn-red" data-color="#FF0000">Red</button>
+            <button class="color-btn" id="btn-blue" data-color="#0000FF">Blue</button>
+            <button class="color-btn" id="btn-green" data-color="#00FF00">Green</button>
         </div>
 
         <button id="startStopBtn">START</button>
@@ -188,14 +191,11 @@
             const controlsDiv = document.getElementById('controls');
             const body = document.body;
             const animationOverlay = document.getElementById('animation-overlay');
-            
             const presetBtns = document.querySelectorAll('.preset-btn');
             const colorBtns = document.querySelectorAll('.color-btn');
 
             let isFlashing = false;
             let currentFrequency = 10;
-
-            // --- Main Functions ---
 
             const setFrequency = (freq) => {
                 currentFrequency = freq;
@@ -203,7 +203,6 @@
                 body.style.animationDuration = `${duration}s`;
                 freqValueSpan.textContent = freq;
                 frequencySlider.value = freq;
-                // Save the last used frequency to local storage
                 localStorage.setItem('lastFrequency', freq);
             };
 
@@ -215,17 +214,15 @@
             const startFlashing = () => {
                 animationOverlay.classList.add('active');
                 
-                // Wait for the "eye-shut" animation to complete
                 setTimeout(() => {
                     controlsDiv.style.display = 'none';
                     animationOverlay.style.display = 'none';
                     animationOverlay.classList.remove('active');
-
                     setFrequency(frequencySlider.value);
                     body.classList.add('flashing');
                     startStopBtn.textContent = 'STOP';
                     isFlashing = true;
-                }, 1500); // Match animation duration
+                }, 1500);
             };
 
             const stopFlashing = () => {
@@ -235,8 +232,6 @@
                 isFlashing = false;
             };
 
-            // --- Event Listeners ---
-
             startStopBtn.addEventListener('click', () => {
                 if (isFlashing) {
                     stopFlashing();
@@ -245,39 +240,27 @@
                 }
             });
 
-            // Allow stopping by pressing any key or clicking anywhere
-            document.addEventListener('keydown', () => {
-                if (isFlashing) stopFlashing();
-            });
+            document.addEventListener('keydown', () => { if (isFlashing) stopFlashing(); });
             document.addEventListener('click', (e) => {
-                // Only stop if clicking outside of the controls
                 if (isFlashing && e.target === document.body) {
                     stopFlashing();
                 }
             });
 
-            frequencySlider.addEventListener('input', (e) => {
-                const freq = e.target.value;
-                setFrequency(freq);
-            });
+            frequencySlider.addEventListener('input', (e) => setFrequency(e.target.value));
 
             presetBtns.forEach(button => {
                 button.addEventListener('click', () => {
-                    const freq = button.getAttribute('data-freq');
-                    setFrequency(freq);
+                    setFrequency(button.getAttribute('data-freq'));
                 });
             });
 
             colorBtns.forEach(button => {
                 button.addEventListener('click', () => {
-                    const color = button.getAttribute('data-color');
-                    setColor(color);
+                    setColor(button.getAttribute('data-color'));
                 });
             });
 
-            // --- Initialization ---
-
-            // Load last used frequency and color from local storage on startup
             const lastFrequency = localStorage.getItem('lastFrequency');
             if (lastFrequency) {
                 setFrequency(lastFrequency);
@@ -287,7 +270,7 @@
             if (lastColor) {
                 setColor(lastColor);
             } else {
-                setColor('#FFFFFF'); // Default to white
+                setColor('#FFFFFF');
             }
         });
     </script>
