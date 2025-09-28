@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Light Therapy</title>
+    <title>Light & Sound Therapy</title>
     <style>
         :root {
             --background-color: #1a1a1a;
@@ -73,7 +73,7 @@
             cursor: pointer;
         }
         
-        select {
+        select, .audio-controls label {
             background-color: var(--button-bg);
             color: var(--text-color);
             border: 1px solid #666;
@@ -81,6 +81,14 @@
             border-radius: 8px;
             font-size: 1em;
             width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .audio-controls label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
 
         button {
@@ -168,7 +176,6 @@
             display: none;
         }
 
-        /* ----- THIS IS THE FIX ----- */
         @keyframes eye-shut {
             0% {
                 clip-path: inset(0% 0% 0% 0%);
@@ -178,7 +185,6 @@
                 background: #000;
             }
         }
-        /* -------------------------- */
 
         @keyframes fade-in-text {
             0% { opacity: 0; }
@@ -202,13 +208,12 @@
     
     <div id="animation-overlay">
         <div class="text">CLOSE YOUR EYES</div>
-    }
     </div>
 
     <div id="timer-display"></div>
 
     <div id="controls">
-        <h1>Flicker Therapy</h1>
+        <h1>Light & Sound Therapy</h1>
 
         <div class="control-group">
             <label for="frequency">Frequency: <span id="freqValue">10</span> Hz</label>
@@ -241,6 +246,14 @@
                 <option value="0" selected>Manual Stop</option>
             </select>
         </div>
+        
+        <div class="control-group audio-controls">
+            <label for="audio-toggle">
+                Enable Binaural Beats <input type="checkbox" id="audio-toggle">
+            </label>
+            <label for="volume-slider">Volume</label>
+            <input type="range" id="volume-slider" min="0" max="0.5" value="0.25" step="0.01" class="slider">
+        </div>
 
         <button id="startStopBtn">START</button>
     </div>
@@ -258,43 +271,87 @@
             const mindStateBtns = document.querySelectorAll('.mind-state-btn');
             const timerSelect = document.getElementById('timer-select');
             const timerDisplay = document.getElementById('timer-display');
+            const audioToggle = document.getElementById('audio-toggle');
+            const volumeSlider = document.getElementById('volume-slider');
 
             // --- State Variables ---
             let isFlashing = false;
             let sessionTimer = null;
             
+            // --- Web Audio API Variables ---
+            let audioContext;
+            let oscillatorL, oscillatorR;
+            let masterGain;
+            const CARRIER_FREQ = 220; // Base tone in Hz (A3 note)
+
             // --- Screen & Orientation Control ---
             const enterFullScreen = (element) => {
                 if (element.requestFullscreen) element.requestFullscreen();
-                else if (element.webkitRequestFullscreen) element.webkitRequestFullscreen(); // Safari
+                else if (element.webkitRequestFullscreen) element.webkitRequestFullscreen();
             };
 
             const exitFullScreen = () => {
                 if (document.exitFullscreen) document.exitFullscreen();
-                else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); // Safari
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
             };
             
             const lockLandscape = async () => {
                 try {
-                    if (screen.orientation && screen.orientation.lock) {
-                        await screen.orientation.lock('landscape');
-                    }
-                } catch (err) {
-                    console.log("Could not lock screen orientation (this is normal on desktop).");
-                }
+                    if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape');
+                } catch (err) { console.log("Could not lock screen orientation."); }
             };
             
             const unlockOrientation = () => {
-                if (screen.orientation && screen.orientation.unlock) {
-                    screen.orientation.unlock();
-                }
+                if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
+            };
+
+            // --- Binaural Beats Functions ---
+            const playBinauralBeat = (beatFreq) => {
+                if (!audioToggle.checked) return;
+
+                // Initialize AudioContext on user interaction
+                if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Create nodes
+                masterGain = audioContext.createGain();
+                oscillatorL = audioContext.createOscillator();
+                oscillatorR = audioContext.createOscillator();
+                const pannerL = audioContext.createStereoPanner();
+                const pannerR = audioContext.createStereoPanner();
+
+                // Set frequencies
+                oscillatorL.frequency.setValueAtTime(CARRIER_FREQ, audioContext.currentTime);
+                oscillatorR.frequency.setValueAtTime(CARRIER_FREQ + beatFreq, audioContext.currentTime);
+                oscillatorL.type = 'sine';
+                oscillatorR.type = 'sine';
+
+                // Set panning
+                pannerL.pan.setValueAtTime(-1, audioContext.currentTime); // Left
+                pannerR.pan.setValueAtTime(1, audioContext.currentTime); // Right
+
+                // Connect the graph
+                oscillatorL.connect(pannerL).connect(masterGain);
+                oscillatorR.connect(pannerR).connect(masterGain);
+                masterGain.connect(audioContext.destination);
+                
+                // Set volume
+                masterGain.gain.setValueAtTime(volumeSlider.value, audioContext.currentTime);
+                
+                // Start oscillators
+                oscillatorL.start();
+                oscillatorR.start();
+            };
+            
+            const stopBinauralBeat = () => {
+                if (oscillatorL) oscillatorL.stop();
+                if (oscillatorR) oscillatorR.stop();
+                oscillatorL = null;
+                oscillatorR = null;
             };
 
             // --- UI & State Update Functions ---
             const updateActiveFreqButton = (currentFreq) => {
-                presetBtns.forEach(btn => {
-                    btn.classList.toggle('active', btn.getAttribute('data-freq') === String(currentFreq));
-                });
+                presetBtns.forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-freq') === String(currentFreq)));
             };
 
             const setFrequency = (freq) => {
@@ -305,53 +362,45 @@
                 freqValueSpan.textContent = numericFreq;
                 frequencySlider.value = numericFreq;
                 localStorage.setItem('lastFrequency', numericFreq);
-                
                 updateActiveFreqButton(numericFreq);
+                
+                // If already playing, update the beat frequency in real-time
+                if (isFlashing && oscillatorR) {
+                    oscillatorR.frequency.setValueAtTime(CARRIER_FREQ + numericFreq, audioContext.currentTime);
+                }
             };
 
             const setColor = (color) => {
                 document.documentElement.style.setProperty('--flash-color', color);
                 localStorage.setItem('lastColor', color);
-
-                mindStateBtns.forEach(btn => {
-                    btn.classList.toggle('active', btn.getAttribute('data-color') === color);
-                });
+                mindStateBtns.forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-color') === color));
             };
 
             const startTimer = () => {
                 const duration = Number(timerSelect.value);
-                if (duration === 0) return; // Manual stop, no timer needed
+                if (duration === 0) return;
 
                 let timeLeft = duration;
-                
                 const updateDisplay = () => {
                     const minutes = Math.floor(timeLeft / 60);
                     const seconds = timeLeft % 60;
                     timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
                     timerDisplay.style.display = 'block';
                 };
-
                 updateDisplay();
-
                 sessionTimer = setInterval(() => {
                     timeLeft--;
                     updateDisplay();
-                    if (timeLeft <= 0) {
-                        stopFlashing(); // Automatically stop when timer ends
-                    }
+                    if (timeLeft <= 0) stopFlashing();
                 }, 1000);
             };
 
             // --- Main App Flow ---
             const startFlashing = async () => {
-                // 1. Trigger full screen and orientation lock
                 enterFullScreen(document.documentElement);
                 await lockLandscape();
-
-                // 2. Play 'eye-shut' animation
                 animationOverlay.classList.add('active');
                 
-                // 3. After animation, start the session
                 setTimeout(() => {
                     controlsDiv.style.display = 'none';
                     animationOverlay.style.display = 'none';
@@ -359,62 +408,47 @@
                     
                     setFrequency(frequencySlider.value);
                     body.classList.add('flashing');
+                    playBinauralBeat(Number(frequencySlider.value));
+                    
                     startStopBtn.textContent = 'STOP';
                     isFlashing = true;
-
-                    // 4. Start the session timer
                     startTimer();
                 }, 1500);
             };
 
             const stopFlashing = () => {
-                if (!isFlashing) return; // Prevent multiple stops
+                if (!isFlashing) return;
                 
-                // 1. Clear timer
                 clearInterval(sessionTimer);
                 timerDisplay.style.display = 'none';
-
-                // 2. Stop flashing and show controls
+                
                 body.classList.remove('flashing');
+                stopBinauralBeat();
+
                 controlsDiv.style.display = 'flex';
                 startStopBtn.textContent = 'START';
                 isFlashing = false;
 
-                // 3. Exit full screen and unlock orientation
                 exitFullScreen();
                 unlockOrientation();
             };
 
             // --- Event Listeners ---
-            startStopBtn.addEventListener('click', () => {
-                isFlashing ? stopFlashing() : startFlashing();
-            });
-
+            startStopBtn.addEventListener('click', () => isFlashing ? stopFlashing() : startFlashing());
             document.addEventListener('keydown', () => { if (isFlashing) stopFlashing(); });
             document.addEventListener('click', (e) => {
-                if (isFlashing && e.target === document.body) {
-                    stopFlashing();
-                }
+                if (isFlashing && e.target === document.body) stopFlashing();
             });
-
             frequencySlider.addEventListener('input', (e) => setFrequency(e.target.value));
-
-            presetBtns.forEach(button => {
-                button.addEventListener('click', () => {
-                    setFrequency(button.getAttribute('data-freq'));
-                });
-            });
-
-            mindStateBtns.forEach(button => {
-                button.addEventListener('click', () => {
-                    setColor(button.getAttribute('data-color'));
-                });
+            presetBtns.forEach(button => button.addEventListener('click', () => setFrequency(button.getAttribute('data-freq'))));
+            mindStateBtns.forEach(button => button.addEventListener('click', () => setColor(button.getAttribute('data-color'))));
+            volumeSlider.addEventListener('input', (e) => {
+                if (masterGain) masterGain.gain.setValueAtTime(e.target.value, audioContext.currentTime);
             });
             
             // --- Initialization ---
             const lastFrequency = localStorage.getItem('lastFrequency');
             setFrequency(lastFrequency || 10);
-
             const lastColor = localStorage.getItem('lastColor');
             setColor(lastColor || '#FFFFFF');
         });
