@@ -189,9 +189,10 @@
             // The interval needs to be half the period for a full on/off cycle
             const intervalTime = 1000 / (frequency * 2);
 
-            // Hide controls for an immersive experience
+            // Hide controls and cursor for an immersive experience
             controls.style.display = 'none';
             warning.style.display = 'none';
+            flickerScreen.style.cursor = 'none'; // Hide mouse cursor
 
             flickerInterval = setInterval(() => {
                 flickerScreen.style.backgroundColor = isLit ? 'black' : selectedColor;
@@ -207,9 +208,10 @@
             flickerScreen.style.backgroundColor = 'black'; // Reset to black
             isLit = false;
             
-            // Show controls again
+            // Show controls and cursor again
             controls.style.display = 'flex';
             warning.style.display = 'block';
+            flickerScreen.style.cursor = 'pointer'; // Show mouse cursor
         }
 
         function toggleFullscreen() {
