@@ -275,6 +275,8 @@
                 <option value="deepDive">Deep Dive (Meditation)</option>
                 <option value="sleepInduction">Sleep Induction</option>
                 <option value="creativeFlow">Creative Flow</option>
+                <option value="calmAndRelease">Calm & Release</option>
+                <option value="ganzfeldJourney">Ganzfeld Journey</option>
             </select>
         </div>
 
@@ -329,24 +331,34 @@
             // --- Session Pattern Definitions ---
             const sessionPatterns = {
                 rampUp: [
-                    { freq: 10, duration: 0.25 },
-                    { freq: 18, duration: 0.50 },
-                    { freq: 10, duration: 0.25 }
+                    { freq: 10, duration: 0.25, color: "#0000FF" },
+                    { freq: 18, duration: 0.50, color: "#FFFFFF" },
+                    { freq: 10, duration: 0.25, color: "#0000FF" }
                 ],
                 deepDive: [
-                    { freq: 10, duration: 0.25 },
-                    { freq: 6,  duration: 0.50 },
-                    { freq: 10, duration: 0.25 }
+                    { freq: 10, duration: 0.25, color: "#0000FF" },
+                    { freq: 6,  duration: 0.50, color: "#00FF00" },
+                    { freq: 10, duration: 0.25, color: "#0000FF" }
                 ],
                 sleepInduction: [
-                    { freq: 10, duration: 0.20 },
-                    { freq: 6,  duration: 0.40 },
-                    { freq: 3,  duration: 0.40 }
+                    { freq: 10, duration: 0.20, color: "#0000FF" },
+                    { freq: 6,  duration: 0.40, color: "#00FF00" },
+                    { freq: 3,  duration: 0.40, color: "#0000FF" }
                 ],
                 creativeFlow: [
-                    { freq: 10, duration: 0.15 },
-                    { freq: 8,  duration: 0.70 },
-                    { freq: 10, duration: 0.15 }
+                    { freq: 10, duration: 0.15, color: "#0000FF" },
+                    { freq: 8,  duration: 0.70, color: "#00FF00" },
+                    { freq: 10, duration: 0.15, color: "#0000FF" }
+                ],
+                calmAndRelease: [
+                    { freq: 10, duration: 0.25, color: "#0000FF" },
+                    { freq: 6,  duration: 0.50, color: "#00FF00" },
+                    { freq: 10, duration: 0.25, color: "#0000FF" }
+                ],
+                ganzfeldJourney: [
+                    { freq: 10, duration: 0.20, color: "#0000FF" }, // Calm (Blue)
+                    { freq: 5,  duration: 0.60, color: "#FFFFFF" }, // Standard (White)
+                    { freq: 10, duration: 0.20, color: "#00FF00" }  // Balance (Green)
                 ]
             };
 
@@ -421,7 +433,8 @@
                 body.style.animationDuration = `${duration}s`;
                 freqValueSpan.textContent = numericFreq;
                 frequencySlider.value = numericFreq;
-                localStorage.setItem('lastFrequency', numericFreq);
+                
+                if(patternSelect.value === 'standard') localStorage.setItem('lastFrequency', numericFreq);
                 updateActiveFreqButton(numericFreq);
                 
                 if (isFlashing && oscillatorR) {
@@ -431,7 +444,7 @@
 
             const setColor = (color) => {
                 document.documentElement.style.setProperty('--flash-color', color);
-                localStorage.setItem('lastColor', color);
+                if(patternSelect.value === 'standard') localStorage.setItem('lastColor', color);
                 mindStateBtns.forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-color') === color));
             };
 
@@ -486,15 +499,18 @@
 
                         frequencySlider.disabled = true;
                         presetBtns.forEach(btn => btn.disabled = true);
+                        mindStateBtns.forEach(btn => btn.disabled = true);
                         
-                        const initialFreq = pattern[0].freq;
-                        setFrequency(initialFreq);
-                        playBinauralBeat(initialFreq);
+                        const initialPhase = pattern[0];
+                        setFrequency(initialPhase.freq);
+                        if(initialPhase.color) setColor(initialPhase.color);
+                        playBinauralBeat(initialPhase.freq);
 
                         pattern.forEach(phase => {
                             const phaseDuration = totalDuration * phase.duration;
                             const timeoutId = setTimeout(() => {
                                 setFrequency(phase.freq);
+                                if(phase.color) setColor(phase.color);
                             }, cumulativeDelay * 1000);
                             
                             phaseTimeouts.push(timeoutId);
@@ -523,6 +539,7 @@
                 
                 frequencySlider.disabled = false;
                 presetBtns.forEach(btn => btn.disabled = false);
+                mindStateBtns.forEach(btn => btn.disabled = false);
 
                 try {
                     await exitFullScreen();
@@ -572,7 +589,6 @@
                 const lastPattern = localStorage.getItem('lastPattern');
                 if (lastPattern) {
                     patternSelect.value = lastPattern;
-                    // Trigger change event to correctly set disabled state of manual timer
                     patternSelect.dispatchEvent(new Event('change'));
                 }
 
@@ -587,7 +603,6 @@
                     timerSelect.value = lastDuration;
                 }
                 
-                // Re-check disabled state in case saved duration was 0 for a pattern
                 if (patternSelect.value !== 'standard' && timerSelect.value === '0') {
                     timerSelect.value = '900';
                 }
