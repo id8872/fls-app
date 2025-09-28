@@ -273,6 +273,8 @@
                 <option value="standard">Standard</option>
                 <option value="rampUp">Ramp Up (Focus)</option>
                 <option value="deepDive">Deep Dive (Meditation)</option>
+                <option value="sleepInduction">Sleep Induction</option>
+                <option value="creativeFlow">Creative Flow</option>
             </select>
         </div>
 
@@ -327,14 +329,24 @@
             // --- Session Pattern Definitions ---
             const sessionPatterns = {
                 rampUp: [
-                    { freq: 10, duration: 0.25 }, // Phase 1: 25% of time at Alpha
-                    { freq: 18, duration: 0.50 }, // Phase 2: 50% of time at Beta
-                    { freq: 10, duration: 0.25 }  // Phase 3: 25% of time back at Alpha
+                    { freq: 10, duration: 0.25 },
+                    { freq: 18, duration: 0.50 },
+                    { freq: 10, duration: 0.25 }
                 ],
                 deepDive: [
-                    { freq: 10, duration: 0.25 }, // Phase 1: 25% of time at Alpha
-                    { freq: 6,  duration: 0.50 }, // Phase 2: 50% of time at Theta
-                    { freq: 10, duration: 0.25 }  // Phase 3: 25% of time back at Alpha
+                    { freq: 10, duration: 0.25 },
+                    { freq: 6,  duration: 0.50 },
+                    { freq: 10, duration: 0.25 }
+                ],
+                sleepInduction: [
+                    { freq: 10, duration: 0.20 },
+                    { freq: 6,  duration: 0.40 },
+                    { freq: 3,  duration: 0.40 }
+                ],
+                creativeFlow: [
+                    { freq: 10, duration: 0.15 },
+                    { freq: 8,  duration: 0.70 },
+                    { freq: 10, duration: 0.15 }
                 ]
             };
 
