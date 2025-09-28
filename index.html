@@ -41,6 +41,13 @@
             width: 100%;
             margin-bottom: 20px;
             text-align: center;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        /* Style for when controls are disabled by a pattern */
+        .control-group.disabled-group {
+            opacity: 0.4;
+            pointer-events: none;
         }
         
         .presets {
@@ -84,7 +91,6 @@
             box-sizing: border-box;
         }
         
-        /* Style for the audio toggle label to look like a button */
         #audio-label {
             background-color: var(--button-bg);
             color: var(--text-color);
@@ -94,8 +100,8 @@
             cursor: pointer;
             font-size: 1em;
             transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-            width: 100%; /* Make button full-width */
-            box-sizing: border-box; /* Include padding in width calculation */
+            width: 100%;
+            box-sizing: border-box;
         }
 
         #audio-label:hover {
@@ -111,7 +117,6 @@
              background-color: #0069d9;
         }
 
-        /* Hide the actual checkbox */
         #audio-toggle {
             display: none;
         }
@@ -246,12 +251,12 @@
     <div id="controls">
         <h1>Light & Sound Therapy</h1>
 
-        <div class="control-group">
+        <div class="control-group" id="frequency-group">
             <label for="frequency">Frequency: <span id="freqValue">10</span> Hz</label>
             <input type="range" id="frequency" min="1" max="60" value="10" class="slider">
         </div>
         
-        <div class="control-group presets">
+        <div class="control-group presets" id="frequency-presets-group">
             <div class="preset-label">Frequency Presets</div>
             <button class="preset-btn" data-freq="10">Relaxation</button>
             <button class="preset-btn" data-freq="15">Focus</button>
@@ -259,7 +264,7 @@
             <button class="preset-btn" data-freq="6">Meditation</button>
         </div>
 
-        <div class="control-group presets">
+        <div class="control-group presets" id="mind-state-presets-group">
             <div class="preset-label">Mind State</div>
             <button class="mind-state-btn" data-color="#FFFFFF">Standard</button>
             <button class="mind-state-btn" data-color="#FF0000">Energy</button>
@@ -315,6 +320,9 @@
             const timerDisplay = document.getElementById('timer-display');
             const audioToggle = document.getElementById('audio-toggle');
             const audioLabel = document.getElementById('audio-label');
+            const frequencyGroup = document.getElementById('frequency-group');
+            const frequencyPresetsGroup = document.getElementById('frequency-presets-group');
+            const mindStatePresetsGroup = document.getElementById('mind-state-presets-group');
 
             // --- State Variables ---
             let isFlashing = false;
@@ -330,95 +338,46 @@
 
             // --- Session Pattern Definitions ---
             const sessionPatterns = {
-                rampUp: [
-                    { freq: 10, duration: 0.25, color: "#0000FF" },
-                    { freq: 18, duration: 0.50, color: "#FFFFFF" },
-                    { freq: 10, duration: 0.25, color: "#0000FF" }
-                ],
-                deepDive: [
-                    { freq: 10, duration: 0.25, color: "#0000FF" },
-                    { freq: 6,  duration: 0.50, color: "#00FF00" },
-                    { freq: 10, duration: 0.25, color: "#0000FF" }
-                ],
-                sleepInduction: [
-                    { freq: 10, duration: 0.20, color: "#0000FF" },
-                    { freq: 6,  duration: 0.40, color: "#00FF00" },
-                    { freq: 3,  duration: 0.40, color: "#0000FF" }
-                ],
-                creativeFlow: [
-                    { freq: 10, duration: 0.15, color: "#0000FF" },
-                    { freq: 8,  duration: 0.70, color: "#00FF00" },
-                    { freq: 10, duration: 0.15, color: "#0000FF" }
-                ],
-                calmAndRelease: [
-                    { freq: 10, duration: 0.25, color: "#0000FF" },
-                    { freq: 6,  duration: 0.50, color: "#00FF00" },
-                    { freq: 10, duration: 0.25, color: "#0000FF" }
-                ],
-                ganzfeldJourney: [
-                    { freq: 10, duration: 0.20, color: "#0000FF" }, // Calm (Blue)
-                    { freq: 5,  duration: 0.60, color: "#FFFFFF" }, // Standard (White)
-                    { freq: 10, duration: 0.20, color: "#00FF00" }  // Balance (Green)
-                ]
+                rampUp: [ { freq: 10, duration: 0.25, color: "#0000FF" }, { freq: 18, duration: 0.50, color: "#FFFFFF" }, { freq: 10, duration: 0.25, color: "#0000FF" } ],
+                deepDive: [ { freq: 10, duration: 0.25, color: "#0000FF" }, { freq: 6,  duration: 0.50, color: "#00FF00" }, { freq: 10, duration: 0.25, color: "#0000FF" } ],
+                sleepInduction: [ { freq: 10, duration: 0.20, color: "#0000FF" }, { freq: 6,  duration: 0.40, color: "#00FF00" }, { freq: 3,  duration: 0.40, color: "#0000FF" } ],
+                creativeFlow: [ { freq: 10, duration: 0.15, color: "#0000FF" }, { freq: 8,  duration: 0.70, color: "#00FF00" }, { freq: 10, duration: 0.15, color: "#0000FF" } ],
+                calmAndRelease: [ { freq: 10, duration: 0.25, color: "#0000FF" }, { freq: 6,  duration: 0.50, color: "#00FF00" }, { freq: 10, duration: 0.25, color: "#0000FF" } ],
+                ganzfeldJourney: [ { freq: 10, duration: 0.20, color: "#0000FF" }, { freq: 5,  duration: 0.60, color: "#FFFFFF" }, { freq: 10, duration: 0.20, color: "#00FF00" } ]
             };
 
             // --- Screen & Orientation Control ---
-            const enterFullScreen = (element) => {
-                if (element.requestFullscreen) return element.requestFullscreen();
-                if (element.webkitRequestFullscreen) return element.webkitRequestFullscreen();
-                return Promise.resolve();
-            };
-
-            const exitFullScreen = () => {
-                if (document.exitFullscreen) return document.exitFullscreen();
-                if (document.webkitExitFullscreen) return document.webkitExitFullscreen();
-                return Promise.resolve();
-            };
-            
-            const lockLandscape = async () => {
-                try {
-                    if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape');
-                } catch (err) { console.log("Could not lock screen orientation."); }
-            };
-            
-            const unlockOrientation = () => {
-                if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
-            };
+            const enterFullScreen = (element) => { if (element.requestFullscreen) return element.requestFullscreen(); if (element.webkitRequestFullscreen) return element.webkitRequestFullscreen(); return Promise.resolve(); };
+            const exitFullScreen = () => { if (document.exitFullscreen) return document.exitFullscreen(); if (document.webkitExitFullscreen) return document.webkitExitFullscreen(); return Promise.resolve(); };
+            const lockLandscape = async () => { try { if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape'); } catch (err) { console.log("Could not lock screen orientation."); } };
+            const unlockOrientation = () => { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); };
 
             // --- Binaural Beats Functions ---
             const playBinauralBeat = (beatFreq) => {
                 if (!audioToggle.checked) return;
                 if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                
+                stopBinauralBeat(); // Stop any existing beat first
                 masterGain = audioContext.createGain();
                 oscillatorL = audioContext.createOscillator();
                 oscillatorR = audioContext.createOscillator();
                 const pannerL = audioContext.createStereoPanner();
                 const pannerR = audioContext.createStereoPanner();
-
                 oscillatorL.frequency.setValueAtTime(CARRIER_FREQ, audioContext.currentTime);
                 oscillatorR.frequency.setValueAtTime(CARRIER_FREQ + beatFreq, audioContext.currentTime);
                 oscillatorL.type = 'sine';
                 oscillatorR.type = 'sine';
-
                 pannerL.pan.setValueAtTime(-1, audioContext.currentTime);
                 pannerR.pan.setValueAtTime(1, audioContext.currentTime);
-
                 oscillatorL.connect(pannerL).connect(masterGain);
                 oscillatorR.connect(pannerR).connect(masterGain);
                 masterGain.connect(audioContext.destination);
-                
                 masterGain.gain.setValueAtTime(FIXED_VOLUME, audioContext.currentTime);
-                
                 oscillatorL.start();
                 oscillatorR.start();
             };
-            
             const stopBinauralBeat = () => {
-                if (oscillatorL) oscillatorL.stop();
-                if (oscillatorR) oscillatorR.stop();
-                oscillatorL = null;
-                oscillatorR = null;
+                if (oscillatorL) { oscillatorL.stop(); oscillatorL = null; }
+                if (oscillatorR) { oscillatorR.stop(); oscillatorR = null; }
             };
 
             // --- UI & State Update Functions ---
@@ -429,14 +388,11 @@
             const setFrequency = (freq) => {
                 const numericFreq = Number(freq);
                 const duration = 1 / numericFreq;
-                
                 body.style.animationDuration = `${duration}s`;
                 freqValueSpan.textContent = numericFreq;
                 frequencySlider.value = numericFreq;
-                
                 if(patternSelect.value === 'standard') localStorage.setItem('lastFrequency', numericFreq);
                 updateActiveFreqButton(numericFreq);
-                
                 if (isFlashing && oscillatorR) {
                     oscillatorR.frequency.setValueAtTime(CARRIER_FREQ + numericFreq, audioContext.currentTime);
                 }
@@ -447,11 +403,16 @@
                 if(patternSelect.value === 'standard') localStorage.setItem('lastColor', color);
                 mindStateBtns.forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-color') === color));
             };
+            
+            const toggleStandardControls = (isEnabled) => {
+                frequencyGroup.classList.toggle('disabled-group', !isEnabled);
+                frequencyPresetsGroup.classList.toggle('disabled-group', !isEnabled);
+                mindStatePresetsGroup.classList.toggle('disabled-group', !isEnabled);
+            };
 
             const startTimer = () => {
                 const duration = Number(timerSelect.value);
                 if (duration === 0) return;
-
                 let timeLeft = duration;
                 const updateDisplay = () => {
                     const minutes = Math.floor(timeLeft / 60);
@@ -469,24 +430,15 @@
 
             // --- Main App Flow ---
             const startFlashing = async () => {
-                try {
-                    await enterFullScreen(document.documentElement);
-                    await lockLandscape();
-                } catch (err) {
-                    console.error("Fullscreen or orientation lock failed:", err);
-                }
-                
+                try { await enterFullScreen(document.documentElement); await lockLandscape(); } catch (err) { console.error("Fullscreen or orientation lock failed:", err); }
                 animationOverlay.classList.add('active');
-                
                 setTimeout(() => {
                     controlsDiv.style.display = 'none';
                     animationOverlay.style.display = 'none';
                     animationOverlay.classList.remove('active');
-                    
                     body.classList.add('flashing');
                     startStopBtn.textContent = 'STOP';
                     isFlashing = true;
-                    
                     const patternKey = patternSelect.value;
                     if (patternKey === 'standard') {
                         setFrequency(frequencySlider.value);
@@ -496,102 +448,74 @@
                         const totalDuration = Number(timerSelect.value);
                         let cumulativeDelay = 0;
                         phaseTimeouts = [];
-
-                        frequencySlider.disabled = true;
-                        presetBtns.forEach(btn => btn.disabled = true);
-                        mindStateBtns.forEach(btn => btn.disabled = true);
-                        
                         const initialPhase = pattern[0];
                         setFrequency(initialPhase.freq);
                         if(initialPhase.color) setColor(initialPhase.color);
                         playBinauralBeat(initialPhase.freq);
-
                         pattern.forEach(phase => {
                             const phaseDuration = totalDuration * phase.duration;
                             const timeoutId = setTimeout(() => {
                                 setFrequency(phase.freq);
                                 if(phase.color) setColor(phase.color);
                             }, cumulativeDelay * 1000);
-                            
                             phaseTimeouts.push(timeoutId);
                             cumulativeDelay += phaseDuration;
                         });
                     }
-                    
                     startTimer();
                 }, 1500);
             };
 
             const stopFlashing = async () => {
                 if (!isFlashing) return;
-                
                 clearInterval(sessionTimer);
                 phaseTimeouts.forEach(id => clearTimeout(id));
                 phaseTimeouts = [];
                 timerDisplay.style.display = 'none';
-                
                 body.classList.remove('flashing');
                 stopBinauralBeat();
-
                 controlsDiv.style.display = 'flex';
                 startStopBtn.textContent = 'START';
                 isFlashing = false;
-                
-                frequencySlider.disabled = false;
-                presetBtns.forEach(btn => btn.disabled = false);
-                mindStateBtns.forEach(btn => btn.disabled = false);
-
-                try {
-                    await exitFullScreen();
-                    unlockOrientation();
-                } catch (err) {
-                    console.error("Exiting fullscreen or unlocking orientation failed:", err);
-                }
+                try { await exitFullScreen(); unlockOrientation(); } catch (err) { console.error("Exiting fullscreen or unlocking orientation failed:", err); }
             };
 
             // --- Event Listeners ---
             startStopBtn.addEventListener('click', () => isFlashing ? stopFlashing() : startFlashing());
             document.addEventListener('keydown', () => { if (isFlashing) stopFlashing(); });
-            document.addEventListener('click', (e) => {
-                if (isFlashing && e.target === document.body) stopFlashing();
-            });
+            document.addEventListener('click', (e) => { if (isFlashing && e.target === document.body) stopFlashing(); });
             frequencySlider.addEventListener('input', (e) => setFrequency(e.target.value));
             presetBtns.forEach(button => button.addEventListener('click', () => setFrequency(button.getAttribute('data-freq'))));
             mindStateBtns.forEach(button => button.addEventListener('click', () => setColor(button.getAttribute('data-color'))));
-            
             audioToggle.addEventListener('change', () => {
                 const isEnabled = audioToggle.checked;
                 audioLabel.classList.toggle('active', isEnabled);
                 localStorage.setItem('binauralEnabled', isEnabled);
             });
-
-            timerSelect.addEventListener('change', (e) => {
-                localStorage.setItem('lastDuration', e.target.value);
-            });
-            
+            timerSelect.addEventListener('change', (e) => { localStorage.setItem('lastDuration', e.target.value); });
             patternSelect.addEventListener('change', (e) => {
                 const pattern = e.target.value;
                 const manualStopOption = timerSelect.querySelector('option[value="0"]');
                 if (pattern !== 'standard') {
                     manualStopOption.disabled = true;
                     if (timerSelect.value === '0') {
-                        timerSelect.value = '900'; // Default to 15 mins
+                        timerSelect.value = '900';
                         localStorage.setItem('lastDuration', '900');
                     }
+                    toggleStandardControls(false);
                 } else {
                     manualStopOption.disabled = false;
+                    toggleStandardControls(true);
                 }
                 localStorage.setItem('lastPattern', pattern);
             });
 
             // --- Initialization ---
             const loadSettings = () => {
-                const lastPattern = localStorage.getItem('lastPattern');
-                if (lastPattern) {
-                    patternSelect.value = lastPattern;
-                    patternSelect.dispatchEvent(new Event('change'));
-                }
-
+                const lastPattern = localStorage.getItem('lastPattern') || 'standard';
+                patternSelect.value = lastPattern;
+                patternSelect.dispatchEvent(new Event('change'));
+                
                 const lastFrequency = localStorage.getItem('lastFrequency');
                 setFrequency(lastFrequency || 10);
 
@@ -599,9 +523,7 @@
                 setColor(lastColor || '#FFFFFF');
 
                 const lastDuration = localStorage.getItem('lastDuration');
-                if (lastDuration) {
-                    timerSelect.value = lastDuration;
-                }
+                if (lastDuration) timerSelect.value = lastDuration;
                 
                 if (patternSelect.value !== 'standard' && timerSelect.value === '0') {
                     timerSelect.value = '900';
@@ -611,7 +533,6 @@
                 audioToggle.checked = binauralEnabled;
                 audioLabel.classList.toggle('active', binauralEnabled);
             };
-            
             loadSettings();
         });
     </script>
