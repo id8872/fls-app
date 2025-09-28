@@ -81,7 +81,7 @@
             border-radius: 8px;
             cursor: pointer;
             font-size: 1em;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
         }
 
         button:hover {
@@ -97,20 +97,36 @@
             padding: 15px;
             margin-top: 10px;
         }
-
-        /* Specific styles for colored buttons */
-        #btn-white { background-color: #FFFFFF; color: #000; border-color: #ccc; }
-        #btn-white:hover { background-color: #e0e0e0; }
         
-        #btn-red { background-color: #D32F2F; color: #fff; border-color: #B71C1C; }
-        #btn-red:hover { background-color: #B71C1C; }
+        .preset-btn.active {
+            background-color: var(--primary-color);
+            border-color: #0056b3; /* Darker blue */
+            color: white;
+        }
+        .preset-btn.active:hover {
+             background-color: #0069d9; /* Lighter blue on hover */
+        }
 
-        #btn-blue { background-color: #1976D2; color: #fff; border-color: #0D47A1; }
-        #btn-blue:hover { background-color: #0D47A1; }
+        .mind-state-btn.active[data-color="#FFFFFF"] {
+            background-color: #FFFFFF; color: #000; border-color: #ccc;
+        }
+        .mind-state-btn.active[data-color="#FFFFFF"]:hover { background-color: #e0e0e0; }
+        
+        .mind-state-btn.active[data-color="#FF0000"] {
+            background-color: #D32F2F; color: #fff; border-color: #B71C1C;
+        }
+        .mind-state-btn.active[data-color="#FF0000"]:hover { background-color: #B71C1C; }
 
-        #btn-green { background-color: #388E3C; color: #fff; border-color: #1B5E20; }
-        #btn-green:hover { background-color: #1B5E20; }
+        .mind-state-btn.active[data-color="#0000FF"] {
+            background-color: #1976D2; color: #fff; border-color: #0D47A1;
+        }
+        .mind-state-btn.active[data-color="#0000FF"]:hover { background-color: #0D47A1; }
 
+        .mind-state-btn.active[data-color="#00FF00"] {
+            background-color: #388E3C; color: #fff; border-color: #1B5E20;
+        }
+        .mind-state-btn.active[data-color="#00FF00"]:hover { background-color: #1B5E20; }
+        
 
         #animation-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -161,23 +177,23 @@
 
         <div class="control-group">
             <label for="frequency">Frequency: <span id="freqValue">10</span> Hz</label>
-            <input type="range" id="frequency" min="1" max="50" value="10" class="slider">
+            <input type="range" id="frequency" min="1" max="60" value="10" class="slider">
         </div>
         
         <div class="control-group presets">
             <div class="preset-label">Frequency Presets</div>
-            <button class="preset-btn" data-freq="10">Alpha</button>
-            <button class="preset-btn" data-freq="15">Beta</button>
-            <button class="preset-btn" data-freq="40">Gamma</button>
-            <button class="preset-btn" data-freq="6">Theta</button>
+            <button class="preset-btn" data-freq="10">Relaxation</button>
+            <button class="preset-btn" data-freq="15">Focus</button>
+            <button class="preset-btn" data-freq="40">Cognition</button>
+            <button class="preset-btn" data-freq="6">Meditation</button>
         </div>
 
         <div class="control-group presets">
-            <div class="preset-label">Light Color</div>
-            <button class="color-btn" id="btn-white" data-color="#FFFFFF">White</button>
-            <button class="color-btn" id="btn-red" data-color="#FF0000">Red</button>
-            <button class="color-btn" id="btn-blue" data-color="#0000FF">Blue</button>
-            <button class="color-btn" id="btn-green" data-color="#00FF00">Green</button>
+            <div class="preset-label">Mind State</div>
+            <button class="mind-state-btn" data-color="#FFFFFF">Standard</button>
+            <button class="mind-state-btn" data-color="#FF0000">Energy</button>
+            <button class="mind-state-btn" data-color="#0000FF">Calm</button>
+            <button class="mind-state-btn" data-color="#00FF00">Balance</button>
         </div>
 
         <button id="startStopBtn">START</button>
@@ -192,23 +208,43 @@
             const body = document.body;
             const animationOverlay = document.getElementById('animation-overlay');
             const presetBtns = document.querySelectorAll('.preset-btn');
-            const colorBtns = document.querySelectorAll('.color-btn');
+            const mindStateBtns = document.querySelectorAll('.mind-state-btn');
 
             let isFlashing = false;
-            let currentFrequency = 10;
+            
+            const updateActiveFreqButton = (currentFreq) => {
+                presetBtns.forEach(btn => {
+                    if (btn.getAttribute('data-freq') === String(currentFreq)) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+            };
 
             const setFrequency = (freq) => {
-                currentFrequency = freq;
-                const duration = 1 / currentFrequency;
+                const numericFreq = Number(freq);
+                const duration = 1 / numericFreq;
+                
                 body.style.animationDuration = `${duration}s`;
-                freqValueSpan.textContent = freq;
-                frequencySlider.value = freq;
-                localStorage.setItem('lastFrequency', freq);
+                freqValueSpan.textContent = numericFreq;
+                frequencySlider.value = numericFreq;
+                localStorage.setItem('lastFrequency', numericFreq);
+                
+                updateActiveFreqButton(numericFreq);
             };
 
             const setColor = (color) => {
                 document.documentElement.style.setProperty('--flash-color', color);
                 localStorage.setItem('lastColor', color);
+
+                mindStateBtns.forEach(btn => {
+                    if (btn.getAttribute('data-color') === color) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
             };
 
             const startFlashing = () => {
@@ -233,11 +269,7 @@
             };
 
             startStopBtn.addEventListener('click', () => {
-                if (isFlashing) {
-                    stopFlashing();
-                } else {
-                    startFlashing();
-                }
+                isFlashing ? stopFlashing() : startFlashing();
             });
 
             document.addEventListener('keydown', () => { if (isFlashing) stopFlashing(); });
@@ -255,23 +287,17 @@
                 });
             });
 
-            colorBtns.forEach(button => {
+            mindStateBtns.forEach(button => {
                 button.addEventListener('click', () => {
                     setColor(button.getAttribute('data-color'));
                 });
             });
-
+            
             const lastFrequency = localStorage.getItem('lastFrequency');
-            if (lastFrequency) {
-                setFrequency(lastFrequency);
-            }
+            setFrequency(lastFrequency || 10);
 
             const lastColor = localStorage.getItem('lastColor');
-            if (lastColor) {
-                setColor(lastColor);
-            } else {
-                setColor('#FFFFFF');
-            }
+            setColor(lastColor || '#FFFFFF');
         });
     </script>
 </body>
