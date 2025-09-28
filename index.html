@@ -131,6 +131,11 @@
         button:hover {
             background-color: var(--button-hover-bg);
         }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
         
         #startStopBtn {
             background-color: var(--primary-color);
@@ -263,6 +268,15 @@
         </div>
         
         <div class="control-group">
+            <label for="pattern-select">Session Pattern</label>
+            <select id="pattern-select">
+                <option value="standard">Standard</option>
+                <option value="rampUp">Ramp Up (Focus)</option>
+                <option value="deepDive">Deep Dive (Meditation)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
             <label for="timer-select">Session Duration</label>
             <select id="timer-select">
                 <option value="300">5 Minutes</option>
@@ -293,6 +307,7 @@
             const presetBtns = document.querySelectorAll('.preset-btn');
             const mindStateBtns = document.querySelectorAll('.mind-state-btn');
             const timerSelect = document.getElementById('timer-select');
+            const patternSelect = document.getElementById('pattern-select');
             const timerDisplay = document.getElementById('timer-display');
             const audioToggle = document.getElementById('audio-toggle');
             const audioLabel = document.getElementById('audio-label');
@@ -300,23 +315,40 @@
             // --- State Variables ---
             let isFlashing = false;
             let sessionTimer = null;
+            let phaseTimeouts = [];
             
             // --- Web Audio API Variables ---
             let audioContext;
             let oscillatorL, oscillatorR;
             let masterGain;
-            const CARRIER_FREQ = 220; // Base tone in Hz (A3 note)
-            const FIXED_VOLUME = 0.25; // Set a fixed, moderate volume level
+            const CARRIER_FREQ = 220;
+            const FIXED_VOLUME = 0.25;
+
+            // --- Session Pattern Definitions ---
+            const sessionPatterns = {
+                rampUp: [
+                    { freq: 10, duration: 0.25 }, // Phase 1: 25% of time at Alpha
+                    { freq: 18, duration: 0.50 }, // Phase 2: 50% of time at Beta
+                    { freq: 10, duration: 0.25 }  // Phase 3: 25% of time back at Alpha
+                ],
+                deepDive: [
+                    { freq: 10, duration: 0.25 }, // Phase 1: 25% of time at Alpha
+                    { freq: 6,  duration: 0.50 }, // Phase 2: 50% of time at Theta
+                    { freq: 10, duration: 0.25 }  // Phase 3: 25% of time back at Alpha
+                ]
+            };
 
             // --- Screen & Orientation Control ---
             const enterFullScreen = (element) => {
-                if (element.requestFullscreen) element.requestFullscreen();
-                else if (element.webkitRequestFullscreen) element.webkitRequestFullscreen();
+                if (element.requestFullscreen) return element.requestFullscreen();
+                if (element.webkitRequestFullscreen) return element.webkitRequestFullscreen();
+                return Promise.resolve();
             };
 
             const exitFullScreen = () => {
-                if (document.exitFullscreen) document.exitFullscreen();
-                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                if (document.exitFullscreen) return document.exitFullscreen();
+                if (document.webkitExitFullscreen) return document.webkitExitFullscreen();
+                return Promise.resolve();
             };
             
             const lockLandscape = async () => {
@@ -332,7 +364,6 @@
             // --- Binaural Beats Functions ---
             const playBinauralBeat = (beatFreq) => {
                 if (!audioToggle.checked) return;
-
                 if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 
                 masterGain = audioContext.createGain();
@@ -346,8 +377,8 @@
                 oscillatorL.type = 'sine';
                 oscillatorR.type = 'sine';
 
-                pannerL.pan.setValueAtTime(-1, audioContext.currentTime); // Left
-                pannerR.pan.setValueAtTime(1, audioContext.currentTime); // Right
+                pannerL.pan.setValueAtTime(-1, audioContext.currentTime);
+                pannerR.pan.setValueAtTime(1, audioContext.currentTime);
 
                 oscillatorL.connect(pannerL).connect(masterGain);
                 oscillatorR.connect(pannerR).connect(masterGain);
@@ -413,8 +444,13 @@
 
             // --- Main App Flow ---
             const startFlashing = async () => {
-                enterFullScreen(document.documentElement);
-                await lockLandscape();
+                try {
+                    await enterFullScreen(document.documentElement);
+                    await lockLandscape();
+                } catch (err) {
+                    console.error("Fullscreen or orientation lock failed:", err);
+                }
+                
                 animationOverlay.classList.add('active');
                 
                 setTimeout(() => {
@@ -422,20 +458,48 @@
                     animationOverlay.style.display = 'none';
                     animationOverlay.classList.remove('active');
                     
-                    setFrequency(frequencySlider.value);
                     body.classList.add('flashing');
-                    playBinauralBeat(Number(frequencySlider.value));
-                    
                     startStopBtn.textContent = 'STOP';
                     isFlashing = true;
+                    
+                    const patternKey = patternSelect.value;
+                    if (patternKey === 'standard') {
+                        setFrequency(frequencySlider.value);
+                        playBinauralBeat(Number(frequencySlider.value));
+                    } else {
+                        const pattern = sessionPatterns[patternKey];
+                        const totalDuration = Number(timerSelect.value);
+                        let cumulativeDelay = 0;
+                        phaseTimeouts = [];
+
+                        frequencySlider.disabled = true;
+                        presetBtns.forEach(btn => btn.disabled = true);
+                        
+                        const initialFreq = pattern[0].freq;
+                        setFrequency(initialFreq);
+                        playBinauralBeat(initialFreq);
+
+                        pattern.forEach(phase => {
+                            const phaseDuration = totalDuration * phase.duration;
+                            const timeoutId = setTimeout(() => {
+                                setFrequency(phase.freq);
+                            }, cumulativeDelay * 1000);
+                            
+                            phaseTimeouts.push(timeoutId);
+                            cumulativeDelay += phaseDuration;
+                        });
+                    }
+                    
                     startTimer();
                 }, 1500);
             };
 
-            const stopFlashing = () => {
+            const stopFlashing = async () => {
                 if (!isFlashing) return;
                 
                 clearInterval(sessionTimer);
+                phaseTimeouts.forEach(id => clearTimeout(id));
+                phaseTimeouts = [];
                 timerDisplay.style.display = 'none';
                 
                 body.classList.remove('flashing');
@@ -444,9 +508,16 @@
                 controlsDiv.style.display = 'flex';
                 startStopBtn.textContent = 'START';
                 isFlashing = false;
+                
+                frequencySlider.disabled = false;
+                presetBtns.forEach(btn => btn.disabled = false);
 
-                exitFullScreen();
-                unlockOrientation();
+                try {
+                    await exitFullScreen();
+                    unlockOrientation();
+                } catch (err) {
+                    console.error("Exiting fullscreen or unlocking orientation failed:", err);
+                }
             };
 
             // --- Event Listeners ---
@@ -468,9 +539,31 @@
             timerSelect.addEventListener('change', (e) => {
                 localStorage.setItem('lastDuration', e.target.value);
             });
+            
+            patternSelect.addEventListener('change', (e) => {
+                const pattern = e.target.value;
+                const manualStopOption = timerSelect.querySelector('option[value="0"]');
+                if (pattern !== 'standard') {
+                    manualStopOption.disabled = true;
+                    if (timerSelect.value === '0') {
+                        timerSelect.value = '900'; // Default to 15 mins
+                        localStorage.setItem('lastDuration', '900');
+                    }
+                } else {
+                    manualStopOption.disabled = false;
+                }
+                localStorage.setItem('lastPattern', pattern);
+            });
 
             // --- Initialization ---
             const loadSettings = () => {
+                const lastPattern = localStorage.getItem('lastPattern');
+                if (lastPattern) {
+                    patternSelect.value = lastPattern;
+                    // Trigger change event to correctly set disabled state of manual timer
+                    patternSelect.dispatchEvent(new Event('change'));
+                }
+
                 const lastFrequency = localStorage.getItem('lastFrequency');
                 setFrequency(lastFrequency || 10);
 
@@ -480,6 +573,11 @@
                 const lastDuration = localStorage.getItem('lastDuration');
                 if (lastDuration) {
                     timerSelect.value = lastDuration;
+                }
+                
+                // Re-check disabled state in case saved duration was 0 for a pattern
+                if (patternSelect.value !== 'standard' && timerSelect.value === '0') {
+                    timerSelect.value = '900';
                 }
 
                 const binauralEnabled = localStorage.getItem('binauralEnabled') === 'true';
