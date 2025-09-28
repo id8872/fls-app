@@ -126,9 +126,8 @@
             border: 1px solid transparent;
         }
 
-        /* --- NEW STYLES for Color Presets --- */
         .color-preset-button {
-            width: 60px;
+            width: 70px; /* Adjusted width for new labels */
             height: 30px;
             font-size: 0.8rem;
             padding: 0;
@@ -136,7 +135,6 @@
             text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
-        /* --- END of NEW STYLES --- */
 
         /* --- Animation Styles --- */
         #animation-overlay {
@@ -199,13 +197,11 @@
             <button class="preset-button" data-hz="40">Cognition (γ)</button>
         </div>
         
-        <!-- --- NEW HTML for Color Presets --- -->
         <div id="color-presets" class="presets-container">
-             <button class="color-preset-button" data-color="#FFFFFF" style="background-color: #FFFFFF; color: black;">White</button>
-             <button class="color-preset-button" data-color="#FF0000" style="background-color: #FF0000;">Red</button>
-             <button class="color-preset-button" data-color="#00FF00" style="background-color: #00FF00;">Green</button>
+             <button class="color-preset-button" data-color="#FFFFFF" style="background-color: #FFFFFF; color: black;">Vivid</button>
+             <button class="color-preset-button" data-color="#FF0000" style="background-color: #FF0000;">Energy</button>
+             <button class="color-preset-button" data-color="#00FF00" style="background-color: #00FF00; color: black;">Calm</button>
         </div>
-        <!-- --- END of NEW HTML --- -->
 
     </div>
 
@@ -227,7 +223,6 @@
         const fullscreenButton = document.getElementById('fullscreen-button');
         const frequencyPresetsContainer = document.getElementById('frequency-presets');
         
-        // --- NEW reference for Color Presets ---
         const colorPresetsContainer = document.getElementById('color-presets');
 
         let flickerInterval = null;
@@ -308,7 +303,6 @@
             }
         }
 
-        // --- NEW function for Color Presets ---
         function handleColorPresetClick(event) {
             const target = event.target;
             if (target.classList.contains('color-preset-button')) {
@@ -321,7 +315,7 @@
         fullscreenButton.addEventListener('click', toggleFullscreen);
         flickerScreen.addEventListener('click', () => stopFlicker(false));
         frequencyPresetsContainer.addEventListener('click', handleFrequencyPresetClick);
-        colorPresetsContainer.addEventListener('click', handleColorPresetClick); // NEW
+        colorPresetsContainer.addEventListener('click', handleColorPresetClick);
 
         document.addEventListener('DOMContentLoaded', loadSettings);
     </script>
