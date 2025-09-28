@@ -168,10 +168,17 @@
             display: none;
         }
 
+        /* ----- THIS IS THE FIX ----- */
         @keyframes eye-shut {
-            0% { clip-path: inset(0% 0% 0% 0%); }
-            100% { clip-path: inset(50% 0% 50% 0%); background: #000; }
+            0% {
+                clip-path: inset(0% 0% 0% 0%);
+            }
+            100% {
+                clip-path: inset(50% 0% 50% 0%);
+                background: #000;
+            }
         }
+        /* -------------------------- */
 
         @keyframes fade-in-text {
             0% { opacity: 0; }
@@ -180,7 +187,9 @@
 
         body.flashing {
             cursor: none;
-            animation: flash 1s linear infinite;
+            animation-name: flash;
+            animation-timing-function: linear;
+            animation-iteration-count: infinite;
         }
 
         @keyframes flash {
@@ -193,6 +202,7 @@
     
     <div id="animation-overlay">
         <div class="text">CLOSE YOUR EYES</div>
+    }
     </div>
 
     <div id="timer-display"></div>
