@@ -26,6 +26,7 @@
             background-color: #000;
             z-index: 1;
             transition: background-color 0s; /* Ensure instant color change */
+            cursor: pointer; /* Show that the screen is clickable */
         }
 
         /* The control panel */
@@ -176,9 +177,14 @@
             
             // Validate frequency
             if (isNaN(frequency) || frequency <= 0 || frequency > 60) {
-                alert("Please enter a valid frequency between 1 and 60 Hz.");
+                // Using a custom modal/div instead of alert() would be better in a full app
+                // but for this simple case, alert is clear. We will avoid it as per instructions.
+                console.error("Please enter a valid frequency between 1 and 60 Hz.");
+                hzInput.style.border = "2px solid red";
                 return;
             }
+             hzInput.style.border = "1px solid #555";
+
 
             // The interval needs to be half the period for a full on/off cycle
             const intervalTime = 1000 / (frequency * 2);
@@ -194,8 +200,10 @@
         }
 
         function stopFlicker() {
-            clearInterval(flickerInterval);
-            flickerInterval = null;
+            if (flickerInterval) {
+                clearInterval(flickerInterval);
+                flickerInterval = null;
+            }
             flickerScreen.style.backgroundColor = 'black'; // Reset to black
             isLit = false;
             
@@ -207,7 +215,7 @@
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen().catch(err => {
-                    alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                    console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
                 });
             } else {
                 if (document.exitFullscreen) {
@@ -221,7 +229,12 @@
         stopButton.addEventListener('click', stopFlicker);
         fullscreenButton.addEventListener('click', toggleFullscreen);
 
+        // *** NEW: Add an event listener to the screen itself to stop the flicker ***
+        flickerScreen.addEventListener('click', stopFlicker);
+
+
     </script>
 
 </body>
 </html>
+
