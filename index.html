@@ -21,20 +21,19 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--background-color);
             color: var(--text-color);
-            overflow: hidden; /* Prevent scrollbars */
+            overflow-y: auto; /* Allow vertical scrolling */
         }
 
         #controls {
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            height: 100%;
             padding: 20px;
             box-sizing: border-box;
             max-width: 500px;
             margin: 0 auto;
             transition: opacity 0.5s ease;
+            min-height: 100%; /* Ensure it fills screen but can grow */
         }
 
         .control-group {
@@ -212,6 +211,14 @@
             display: none;
         }
 
+        .disclaimer {
+            font-size: 0.8em;
+            color: #888;
+            margin-top: 25px;
+            text-align: center;
+            max-width: 90%;
+        }
+
         @keyframes eye-shut {
             0% {
                 clip-path: inset(0% 0% 0% 0%);
@@ -302,6 +309,10 @@
         </div>
 
         <button id="startStopBtn">START</button>
+
+        <div class="disclaimer">
+            <strong>Warning:</strong> This is not a medical device. Consult a physician before use if you have epilepsy, photosensitivity, or any other pre-existing health condition. Use at your own risk.
+        </div>
     </div>
 
     <script>
