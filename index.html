@@ -289,6 +289,7 @@
                 <option value="creativeFlow">Creative Flow</option>
                 <option value="calmAndRelease">Calm & Release</option>
                 <option value="ganzfeldJourney">Ganzfeld Journey</option>
+                <option value="rageRampDown">The Rage Ramp-Down</option>
             </select>
         </div>
 
@@ -298,6 +299,7 @@
                 <option value="300">5 Minutes</option>
                 <option value="600">10 Minutes</option>
                 <option value="900">15 Minutes</option>
+                <option value="1200">20 Minutes</option>
                 <option value="1800">30 Minutes</option>
                 <option value="0">Manual Stop</option>
             </select>
@@ -344,17 +346,32 @@
             let audioContext;
             let oscillatorL, oscillatorR;
             let masterGain;
-            const CARRIER_FREQ = 220;
+            const DEFAULT_CARRIER_FREQ = 220;
             const FIXED_VOLUME = 0.25;
 
             // --- Session Pattern Definitions ---
+            // Duration is a percentage of total time (0.0 - 1.0)
             const sessionPatterns = {
                 rampUp: [ { freq: 10, duration: 0.25, color: "#0000FF" }, { freq: 18, duration: 0.50, color: "#FFFFFF" }, { freq: 10, duration: 0.25, color: "#0000FF" } ],
                 deepDive: [ { freq: 10, duration: 0.25, color: "#0000FF" }, { freq: 6,  duration: 0.50, color: "#00FF00" }, { freq: 10, duration: 0.25, color: "#0000FF" } ],
                 sleepInduction: [ { freq: 10, duration: 0.20, color: "#0000FF" }, { freq: 6,  duration: 0.40, color: "#00FF00" }, { freq: 3,  duration: 0.40, color: "#0000FF" } ],
                 creativeFlow: [ { freq: 10, duration: 0.15, color: "#0000FF" }, { freq: 8,  duration: 0.70, color: "#00FF00" }, { freq: 10, duration: 0.15, color: "#0000FF" } ],
                 calmAndRelease: [ { freq: 10, duration: 0.25, color: "#0000FF" }, { freq: 6,  duration: 0.50, color: "#00FF00" }, { freq: 10, duration: 0.25, color: "#0000FF" } ],
-                ganzfeldJourney: [ { freq: 10, duration: 0.20, color: "#0000FF" }, { freq: 5,  duration: 0.60, color: "#FFFFFF" }, { freq: 10, duration: 0.20, color: "#00FF00" } ]
+                ganzfeldJourney: [ { freq: 10, duration: 0.20, color: "#0000FF" }, { freq: 5,  duration: 0.60, color: "#FFFFFF" }, { freq: 10, duration: 0.20, color: "#00FF00" } ],
+                // Total 20 mins. 3m hold (15%), 7m ramp (35%), 10m hold (50%).
+                // Carrier 396Hz. Colors Amber #FFB347 to Teal #008080.
+                rageRampDown: [
+                    { freq: 18, duration: 0.15, color: "#FFB347", carrier: 396 }, // Hold Beta/Amber (3m)
+                    // Ramp approximation (7 steps, 1 min each = 7 mins total)
+                    { freq: 16.6, duration: 0.05, color: "#FFAC4F", carrier: 396 }, 
+                    { freq: 15.2, duration: 0.05, color: "#DFA557", carrier: 396 },
+                    { freq: 13.8, duration: 0.05, color: "#BF9E5F", carrier: 396 },
+                    { freq: 12.4, duration: 0.05, color: "#9F9767", carrier: 396 },
+                    { freq: 11.0, duration: 0.05, color: "#809070", carrier: 396 },
+                    { freq: 9.6,  duration: 0.05, color: "#608978", carrier: 396 },
+                    { freq: 8.2,  duration: 0.05, color: "#408280", carrier: 396 },
+                    { freq: 6,  duration: 0.50, color: "#008080", carrier: 396 }  // Hold Theta/Teal (10m)
+                ]
             };
 
             // --- Screen & Orientation Control ---
@@ -364,31 +381,50 @@
             const unlockOrientation = () => { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); };
 
             // --- Binaural Beats Functions ---
-            const playBinauralBeat = (beatFreq) => {
+            const playBinauralBeat = (beatFreq, carrierFreq = DEFAULT_CARRIER_FREQ) => {
                 if (!audioToggle.checked) return;
                 if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                stopBinauralBeat(); // Stop any existing beat first
+                
+                // Ensure previous audio is stopped cleanly
+                if (masterGain) {
+                     masterGain.gain.cancelScheduledValues(audioContext.currentTime);
+                     masterGain.gain.setValueAtTime(masterGain.gain.value, audioContext.currentTime);
+                     masterGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+                }
+                stopBinauralBeat(0.5); // Stop existing oscillators after short fade out
+
                 masterGain = audioContext.createGain();
+                // Start with 0 volume for soft attack
+                masterGain.gain.setValueAtTime(0.001, audioContext.currentTime); 
+
                 oscillatorL = audioContext.createOscillator();
                 oscillatorR = audioContext.createOscillator();
                 const pannerL = audioContext.createStereoPanner();
                 const pannerR = audioContext.createStereoPanner();
-                oscillatorL.frequency.setValueAtTime(CARRIER_FREQ, audioContext.currentTime);
-                oscillatorR.frequency.setValueAtTime(CARRIER_FREQ + beatFreq, audioContext.currentTime);
+
+                oscillatorL.frequency.setValueAtTime(carrierFreq, audioContext.currentTime);
+                oscillatorR.frequency.setValueAtTime(carrierFreq + beatFreq, audioContext.currentTime);
                 oscillatorL.type = 'sine';
                 oscillatorR.type = 'sine';
+
                 pannerL.pan.setValueAtTime(-1, audioContext.currentTime);
                 pannerR.pan.setValueAtTime(1, audioContext.currentTime);
+
                 oscillatorL.connect(pannerL).connect(masterGain);
                 oscillatorR.connect(pannerR).connect(masterGain);
                 masterGain.connect(audioContext.destination);
-                masterGain.gain.setValueAtTime(FIXED_VOLUME, audioContext.currentTime);
+                
+                // Soft attack fade in over 2 seconds
+                masterGain.gain.exponentialRampToValueAtTime(FIXED_VOLUME, audioContext.currentTime + 2.0);
+                
                 oscillatorL.start();
                 oscillatorR.start();
             };
-            const stopBinauralBeat = () => {
-                if (oscillatorL) { oscillatorL.stop(); oscillatorL = null; }
-                if (oscillatorR) { oscillatorR.stop(); oscillatorR = null; }
+            
+            const stopBinauralBeat = (delay = 0) => {
+                const stopTime = audioContext ? audioContext.currentTime + delay : 0;
+                if (oscillatorL) { oscillatorL.stop(stopTime); oscillatorL = null; }
+                if (oscillatorR) { oscillatorR.stop(stopTime); oscillatorR = null; }
             };
 
             // --- UI & State Update Functions ---
@@ -396,16 +432,19 @@
                 presetBtns.forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-freq') === String(currentFreq)));
             };
 
-            const setFrequency = (freq) => {
+            const setFrequency = (freq, carrierFreq = DEFAULT_CARRIER_FREQ) => {
                 const numericFreq = Number(freq);
                 const duration = 1 / numericFreq;
                 body.style.animationDuration = `${duration}s`;
-                freqValueSpan.textContent = numericFreq;
+                freqValueSpan.textContent = numericFreq.toFixed(1).replace(/\.0$/, ''); // Clean display format
                 frequencySlider.value = numericFreq;
                 if(patternSelect.value === 'standard') localStorage.setItem('lastFrequency', numericFreq);
                 updateActiveFreqButton(numericFreq);
                 if (isFlashing && oscillatorR) {
-                    oscillatorR.frequency.setValueAtTime(CARRIER_FREQ + numericFreq, audioContext.currentTime);
+                    // Update beat frequency in real-time.
+                    oscillatorR.frequency.setValueAtTime(carrierFreq + numericFreq, audioContext.currentTime);
+                    // Update carrier frequency in real-time if changed by pattern phase
+                     oscillatorL.frequency.setValueAtTime(carrierFreq, audioContext.currentTime);
                 }
             };
 
@@ -459,19 +498,24 @@
                         const totalDuration = Number(timerSelect.value);
                         let cumulativeDelay = 0;
                         phaseTimeouts = [];
+                        
+                        // Start first phase immediately
                         const initialPhase = pattern[0];
-                        setFrequency(initialPhase.freq);
+                        setFrequency(initialPhase.freq, initialPhase.carrier);
                         if(initialPhase.color) setColor(initialPhase.color);
-                        playBinauralBeat(initialPhase.freq);
-                        pattern.forEach(phase => {
-                            const phaseDuration = totalDuration * phase.duration;
-                            const timeoutId = setTimeout(() => {
-                                setFrequency(phase.freq);
+                        playBinauralBeat(initialPhase.freq, initialPhase.carrier);
+
+                        // Schedule subsequent phases
+                        for (let i = 1; i < pattern.length; i++) {
+                             const phase = pattern[i];
+                             // Calculate delay based on duration of previous phases
+                             cumulativeDelay += totalDuration * pattern[i-1].duration;
+                             const timeoutId = setTimeout(() => {
+                                setFrequency(phase.freq, phase.carrier);
                                 if(phase.color) setColor(phase.color);
                             }, cumulativeDelay * 1000);
                             phaseTimeouts.push(timeoutId);
-                            cumulativeDelay += phaseDuration;
-                        });
+                        }
                     }
                     startTimer();
                 }, 1500);
@@ -484,7 +528,18 @@
                 phaseTimeouts = [];
                 timerDisplay.style.display = 'none';
                 body.classList.remove('flashing');
-                stopBinauralBeat();
+                
+                // Smooth audio fade out before stop
+                if (masterGain && audioContext) {
+                     masterGain.gain.cancelScheduledValues(audioContext.currentTime);
+                     masterGain.gain.setValueAtTime(masterGain.gain.value, audioContext.currentTime);
+                     // 2 second fade out
+                     masterGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 2.0);
+                     setTimeout(() => { stopBinauralBeat(); }, 2100);
+                } else {
+                    stopBinauralBeat();
+                }
+
                 controlsDiv.style.display = 'flex';
                 startStopBtn.textContent = 'START';
                 isFlashing = false;
@@ -507,15 +562,26 @@
             patternSelect.addEventListener('change', (e) => {
                 const pattern = e.target.value;
                 const manualStopOption = timerSelect.querySelector('option[value="0"]');
+                
                 if (pattern !== 'standard') {
                     manualStopOption.disabled = true;
-                    if (timerSelect.value === '0') {
-                        timerSelect.value = '900';
-                        localStorage.setItem('lastDuration', '900');
-                    }
                     toggleStandardControls(false);
+                    
+                    if (pattern === 'rageRampDown') {
+                        // Force 20 minutes for Rage Ramp Down
+                        timerSelect.value = '1200';
+                        // Disable timer select for this specific pattern to enforce protocol
+                        timerSelect.disabled = true; 
+                    } else {
+                         timerSelect.disabled = false;
+                        if (timerSelect.value === '0' || timerSelect.value === '1200') {
+                            timerSelect.value = '900'; // Default others back to 15 if on manual or 20
+                        }
+                    }
+                    localStorage.setItem('lastDuration', timerSelect.value);
                 } else {
                     manualStopOption.disabled = false;
+                    timerSelect.disabled = false;
                     toggleStandardControls(true);
                 }
                 localStorage.setItem('lastPattern', pattern);
@@ -525,6 +591,7 @@
             const loadSettings = () => {
                 const lastPattern = localStorage.getItem('lastPattern') || 'standard';
                 patternSelect.value = lastPattern;
+                // Trigger change event to handle UI state
                 patternSelect.dispatchEvent(new Event('change'));
                 
                 const lastFrequency = localStorage.getItem('lastFrequency');
@@ -534,10 +601,9 @@
                 setColor(lastColor || '#FFFFFF');
 
                 const lastDuration = localStorage.getItem('lastDuration');
-                if (lastDuration) timerSelect.value = lastDuration;
-                
-                if (patternSelect.value !== 'standard' && timerSelect.value === '0') {
-                    timerSelect.value = '900';
+                // Only load last duration if it's not currently disabled by a fixed-time pattern
+                if (lastDuration && !timerSelect.disabled) {
+                     timerSelect.value = lastDuration;
                 }
 
                 const binauralEnabled = localStorage.getItem('binauralEnabled') === 'true';
@@ -549,4 +615,3 @@
     </script>
 </body>
 </html>
-
